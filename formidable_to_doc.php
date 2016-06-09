@@ -17,9 +17,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once plugin_dir_path( __FILE__ ) . 'class/ForDocManager.php';
-define( 'FOR_DOC_VIEW_PATH', untrailingslashit( plugin_dir_path( __FILE__ ) ) . '/views/' );
-define( 'FOR_DOC_CSS_PATH', untrailingslashit( plugin_dir_path( __FILE__ ) ) . '/css/' );
-define( 'FOR_DOC_JS_PATH', untrailingslashit( plugin_dir_path( __FILE__ ) ) . '/js/' );
+require_once 'vendor/autoload.php';
+
+define( 'FOR_DOC_CSS_PATH', plugin_dir_url( __FILE__ ) . 'css/' );
+define( 'FOR_DOC_JS_PATH', plugin_dir_url( __FILE__ ) . 'js/' );
+
 
 function for_doc_boot_loader() {
 	add_action( 'plugins_loaded', 'setForDocTranslation' );

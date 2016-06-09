@@ -1,0 +1,115 @@
+Index: wp-content/plugins/formidable_to_doc/class/vsword/structure/WordDirDocumentStructureDocFile.php
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- wp-content/plugins/formidable_to_doc/class/vsword/structure/WordDirDocumentStructureDocFile.php	(revision )
++++ wp-content/plugins/formidable_to_doc/class/vsword/structure/WordDirDocumentStructureDocFile.php	(revision )
+@@ -1,57 +1,74 @@
+ <?php
++
+ /**
+  * Class WordDirDocumentStructureDocFile
+  * @version 1.0.2
+  * @author v.raskin
+  * @package vsword.structure
+-*/
++ */
+ class WordDirDocumentStructureDocFile extends StructureDocFile {
+-
++	
+ 	/**
+-	* @var BodyCompositeNode
+-	*/
++	 * @var BodyCompositeNode
++	 */
+-	protected $body = NULL;
++	protected $body = null;
+-
++	
+ 	public function __construct() {
+-		$this->name = 'document.xml';		
++		$this->name = 'document.xml';
+ 	}
+ 	
+ 	/**
+-	* @return BodyCompositeNode
+-	*/
++	 * @return BodyCompositeNode
++	 */
+ 	public function getBody() {
+-		if(is_null($this->body)) {
++		if ( is_null( $this->body ) ) {
+ 			$this->body = new BodyCompositeNode();
+ 		}
++		
+ 		return $this->body;
+ 	}
+ 	
+-	public function getContent() { 
++	public function getContent( $body = false ) {
+ 		$document = new DocumentCompositeNode();
++		if ( ! $body ) {
+-		$document->addAttributes(array(
++			$document->addAttributes( array(
+-				 'xmlns:wpc'=>"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas", 
++				'xmlns:wpc'    => "http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas",
+-				 'xmlns:mc'=>"http://schemas.openxmlformats.org/markup-compatibility/2006" ,
++				'xmlns:mc'     => "http://schemas.openxmlformats.org/markup-compatibility/2006",
+-				 'xmlns:o'=>"urn:schemas-microsoft-com:office:office" ,
++				'xmlns:o'      => "urn:schemas-microsoft-com:office:office",
+-				 'xmlns:r'=>"http://schemas.openxmlformats.org/officeDocument/2006/relationships", 
++				'xmlns:r'      => "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+-				 'xmlns:m'=>"http://schemas.openxmlformats.org/officeDocument/2006/math" ,
++				'xmlns:m'      => "http://schemas.openxmlformats.org/officeDocument/2006/math",
+-				 'xmlns:v'=>"urn:schemas-microsoft-com:vml" ,
++				'xmlns:v'      => "urn:schemas-microsoft-com:vml",
+-				 'xmlns:wp14'=>"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing", 
++				'xmlns:wp14'   => "http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing",
+-				 'xmlns:wp'=>"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing", 
++				'xmlns:wp'     => "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+-				 'xmlns:w10'=>"urn:schemas-microsoft-com:office:word" ,
++				'xmlns:w10'    => "urn:schemas-microsoft-com:office:word",
+-				 'xmlns:w'=>"http://schemas.openxmlformats.org/wordprocessingml/2006/main", 
++				'xmlns:w'      => "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+-				 'xmlns:w14'=>"http://schemas.microsoft.com/office/word/2010/wordml" ,
++				'xmlns:w14'    => "http://schemas.microsoft.com/office/word/2010/wordml",
+-				 'xmlns:wpg'=>"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup", 
++				'xmlns:wpg'    => "http://schemas.microsoft.com/office/word/2010/wordprocessingGroup",
+-				 'xmlns:wpi'=>"http://schemas.microsoft.com/office/word/2010/wordprocessingInk" ,
++				'xmlns:wpi'    => "http://schemas.microsoft.com/office/word/2010/wordprocessingInk",
+-				 'xmlns:wne'=>"http://schemas.microsoft.com/office/word/2006/wordml" ,
++				'xmlns:wne'    => "http://schemas.microsoft.com/office/word/2006/wordml",
+-				 'xmlns:wps'=>"http://schemas.microsoft.com/office/word/2010/wordprocessingShape", 
++				'xmlns:wps'    => "http://schemas.microsoft.com/office/word/2010/wordprocessingShape",
+-				 'mc:Ignorable'=>"w14 wp14",
++				'mc:Ignorable' => "w14 wp14",
+-		));  		
++			) );
++		}
+-		$document->addNode($this->getBody()); 
++		$document->addNode( $this->getBody() );
+ 		$string = array(
+ 			$this->getXMLHeader(),
+ 			$document->getWord(),
+-		); 
++		);
+ 		
+-		return join('', $string);
++		return join( '', $string );
+ 	}
++	
++	public function getBodyAsString() {
++		$str = strstr( $this->getContent( true ), '<w:body>' );
++		if ( $str != false ) {
++			$str = strstr( $str, '</w:body>', true );
++		}
++		if ( $str != false ) {
++			$str = substr( $str, 8 );
++		}
++		return $str;
++	}
++	
++	
+ }
+\ No newline at end of file

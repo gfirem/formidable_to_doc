@@ -1,0 +1,17 @@
+Index: wp-content/plugins/formidable_to_doc/class/vsword/node/DocumentCompositeNode.php
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- wp-content/plugins/formidable_to_doc/class/vsword/node/DocumentCompositeNode.php	(revision )
++++ wp-content/plugins/formidable_to_doc/class/vsword/node/DocumentCompositeNode.php	(revision )
+@@ -8,7 +8,7 @@
+ */
+ class DocumentCompositeNode extends EmptyCompositeNode {
+ 
+-	public function addNode($node) {
++	public function addNode(INode $node) {
+ 		return parent::addNode($node);
+ 	}
+ 
+\ No newline at end of file

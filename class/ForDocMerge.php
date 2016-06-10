@@ -1,6 +1,7 @@
 <?php
 
 use PhpOffice\PhpWord\Autoloader;
+use PhpOffice\PhpWord\ForDocTemplateProcessor;
 use PhpOffice\PhpWord\Settings;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -201,7 +202,7 @@ class ForDocMerge extends ForDocBase {
 		if ( $sendByEmail ) {
 			self::SendMail( "File uploaded by Formidable to Documents", 'gfirem@gmail.com', $fullFilePath );
 		}
-		$uploadToDrive = true;
+		$uploadToDrive = false;
 		if ( $uploadToDrive ) {
 			$upload      = new ForToDocUpload();
 			$is_uploaded = $upload->upload( $fileName, "File uploaded by Formidable to Documents", $fullFilePath );

@@ -4,6 +4,8 @@
 //	exit;
 //}
 
+use PhpOffice\PhpWord\ForDocTemplateProcessor;
+
 class ForDocTemporalDocument {
 
 	/**

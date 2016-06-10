@@ -3,11 +3,10 @@
 //if ( ! defined( 'ABSPATH' ) ) {
 //	exit;
 //}
+namespace PhpOffice\PhpWord;
 
-include_once 'PhpWord/TemplateProcessor.php';
-
+use HTMLUtils;
 use PhpOffice\PhpWord\Shared\String;
-use PhpOffice\PhpWord\TemplateProcessor;
 
 class ForDocTemplateProcessor extends TemplateProcessor {
 
@@ -39,6 +38,9 @@ class ForDocTemplateProcessor extends TemplateProcessor {
 	 */
 	private $relationArray = array();
 
+	/**
+	 * @inheritdoc
+	 */
 	public function __construct( $documentTemplate ) {
 		parent::__construct( $documentTemplate );
 		$this->tempDocumentTypes    = $this->fixBrokenMacros( $this->zipClass->getFromName( '[Content_Types].xml' ) );

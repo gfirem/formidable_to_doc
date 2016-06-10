@@ -80,7 +80,7 @@ class FormidableToDocAction extends FrmFormAction {
 				foreach ( $fields as $field ) {
 					$key                        = $field['field_key'];
 					$this->form_default[ $key ] = '';
-					if(!in_array($field['type'], ForDocManager::getUnUsedFields())) {
+					if ( ! in_array( $field['type'], ForDocManager::getUnUsedFields() ) ) {
 						switch ( $field['type'] ) {
 							case 'date':
 								?>
@@ -89,8 +89,8 @@ class FormidableToDocAction extends FrmFormAction {
 										<label> <b><?= $field['name'] ?></b></label>
 									</th>
 									<td>
-										<?= ForDocManager::t( '<b>Pattern: </b>' ) . '${' . $key . '}'. ForDocManager::t( ' for full or ')
-										    . '${' . $key . '_date} ' . '${' . $key . '_month} ' . '${' . $key . '_year} '. ForDocManager::t( ' for segmented date.'); ?>
+										<?= ForDocManager::t( '<b>Pattern: </b>' ) . '${' . $key . '}' . ForDocManager::t( ' for full or ' )
+										    . '${' . $key . '_date} ' . '${' . $key . '_month} ' . '${' . $key . '_year} ' . ForDocManager::t( ' for segmented date.' ); ?>
 									</td>
 								</tr>
 								<?php
@@ -139,10 +139,17 @@ class FormidableToDocAction extends FrmFormAction {
 				?>
 				</tbody>
 			</table>
+			<script id="jquery-ui-dialog-js" type='text/javascript' src='<?= site_url(); ?>/wp-includes/js/jquery/ui/core.min.js'></script>
+			<script id="jquery-ui-dialog-js" type='text/javascript' src='<?= site_url(); ?>/wp-includes/js/jquery/ui/widget.min.js'></script>
+			<script id="jquery-ui-dialog-js" type='text/javascript' src='<?= site_url(); ?>/wp-includes/js/jquery/ui/button.min.js'></script>
+			<script id="jquery-ui-dialog-js" type='text/javascript' src='<?= site_url(); ?>/wp-includes/js/jquery/ui/dialog.min.js'></script>
+			<link rel="stylesheet" href="<?= site_url(); ?>/wp-includes/css/jquery-ui-dialog.min.css" id="jquery-ui-dialog-css">
 			<script type='text/javascript' src='<?= site_url(); ?>/wp-content/plugins/formidable_to_doc/js/tinymce/tinymce.min.js'></script>
 			<script type='text/javascript' src='<?= site_url(); ?>/wp-includes/js/jquery/jquery.form.min.js'></script>
 			<input type="hidden" value="<?= esc_attr( $form_action->post_content['template_attachment_id'] ); ?>" name="<?= $action_control->get_field_name( 'template_attachment_id' ) ?>" id="template_attachment_id_frm">
 			<input type="hidden" value="<?= esc_attr( $form_action->post_content['template_attachment_url'] ); ?>" name="<?= $action_control->get_field_name( 'template_attachment_url' ) ?>" id="template_attachment_url_frm">
+			<input type="hidden" value="<?= esc_attr( $form_action->post_content['template_attachment_patterns'] ); ?>" name="<?= $action_control->get_field_name( 'template_attachment_patterns' ) ?>" id="template_attachment_patterns">
+
 			<?php
 			$file_template_id = $form_action->post_content['template_attachment_id'];
 			if ( isset( $file_template_id ) && ! empty( $file_template_id ) ) {
@@ -160,15 +167,19 @@ class FormidableToDocAction extends FrmFormAction {
 					<?php wp_nonce_field( 'delete_template_file_nonce', 'security-delete' ); ?>
 					<input type="hidden" name="action" value="delete_template_file">
 					<input type="hidden" value="<?= esc_attr( $form_action->post_content['template_attachment_id'] ); ?>" name="template_attachment_file_id" id="template_attachment_file_id">
-
 					<div style="display: table-caption; position: relative;">
 						<a id="template_attachment_url_link" href="<?= esc_attr( $form_action->post_content['template_attachment_url'] ); ?>">
 							<img width="48" height="64" src="<?= site_url(); ?>/wp-includes/images/media/document.png" class="attachment-thumbnail size-thumbnail" alt="<?= ForDocManager::t( 'Template document' ) ?>">
-						</a>
+						</a><br/>
+						<input id="detected_patterns" type="button" style="margin-top: 5px; margin-right: 5px;" class="button-primary" value="<?= ForDocManager::t( 'See detected patterns' ) ?>" >
 						<input type="submit" style="margin-top: 5px;" class="button-primary" value="<?= ForDocManager::t( 'Delete template' ) ?>">
 						<img style="display: none" id="upload_progress_2" src="<?= site_url(); ?>/wp-content/plugins/formidable/images/ajax_loader.gif" alt="<?= ForDocManager::t( 'Uploading' ) ?>">
 					</div>
 				</form>
+				<div id="dialog-show-patterns" title="<?= ForDocManager::t( 'Detected pattern in document template' ) ?>" hidden="hidden">
+					<div id="pattern-list">
+					</div>
+				</div>
 			</div>
 
 			<div id="upload_file_template_container" <?= $upload_file_template_container_display; ?>>
@@ -200,8 +211,8 @@ class FormidableToDocAction extends FrmFormAction {
 				language: '<?= $language ?>',
 				relative_urls: false,
 				remove_script_host: false,
-				force_p_newlines : false,
-				forced_root_block : '',
+				force_p_newlines: false,
+				forced_root_block: '',
 				toolbar: "insertfile undo redo | styleselect | bold italic | forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image | code",
 				plugins: 'image imagetools code textcolor colorpicker',
 				imagetools_toolbar: "rotateleft rotateright | flipv fliph | editimage imageoptions",
@@ -220,6 +231,7 @@ class FormidableToDocAction extends FrmFormAction {
 			'form_id'                 => $this->get_field_name( 'form_id' ),
 			'template_attachment_id'  => '',
 			'template_attachment_url' => '',
+			'template_attachment_patterns' => '',
 		);
 
 		if ( $this->form_id != null ) {

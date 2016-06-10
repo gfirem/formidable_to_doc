@@ -1,5 +1,7 @@
 <?php
 
+use PhpOffice\PhpWord\ForDocTemplateProcessor;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -137,7 +139,6 @@ class ForDocAdmin {
 	}
 
 	public function enqueue_ForToDoc_js() {
-//		wp_enqueue_script( 'for_to_doc',  plugins_url('js/for_to_doc.js', __FILE__), array('jquery', 'jquery-form'));
 		wp_enqueue_script( 'jquery' );
 		wp_register_script( 'jquery.hashchange.min', FOR_DOC_JS_PATH . 'jquery.hashchange.min.js' );
 		wp_register_script( 'jquery.easytabs.min', FOR_DOC_JS_PATH . 'jquery.easytabs.min.js' );
@@ -194,6 +195,11 @@ class ForDocAdmin {
 
 			$response['file_id']  = $attach_id;
 			$response['file_url'] = $file_info['url'];
+
+			$templateDocument = new ForDocTemplateProcessor($response['file_url']);
+
+			$response['patterns'] = array('pattern1', 'pattern2', 'pattern3');
+
 		}
 
 		echo json_encode( $response );

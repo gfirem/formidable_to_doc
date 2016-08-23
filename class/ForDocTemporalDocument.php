@@ -50,7 +50,8 @@ class ForDocTemporalDocument {
 		$this->relations   = $doc->getRels();
 		$document          = $doc->getDocument();
 		$documentString    = $document->getContent();
-		$this->bodyString  = $this->getBodyRunAsString( $this->getBodyAsString( $documentString ) );
+		$this->bodyString  = $this->getBodyAsString( $documentString );
+//		$this->bodyString  = $this->getBodyRunAsString( $this->getBodyAsString( $documentString ) );
 		//Create temporary filename
 		$this->filePath = tempnam( $filePath, ForDocManager::getShort() );
 		if ( false === $this->filePath ) {

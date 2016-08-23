@@ -5,8 +5,14 @@
 //}
 namespace PhpOffice\PhpWord;
 
+use DOMElement;
+use DOMNameSpaceNode;
+use DOMXPath;
 use HTMLUtils;
+use PhpOffice\PhpWord\Exception\Exception;
 use PhpOffice\PhpWord\Shared\String;
+use SimpleXMLElement;
+use ZipArchive;
 
 class ForDocTemplateProcessor extends TemplateProcessor {
 
@@ -45,6 +51,14 @@ class ForDocTemplateProcessor extends TemplateProcessor {
 		parent::__construct( $documentTemplate );
 		$this->tempDocumentTypes    = $this->fixBrokenMacros( $this->zipClass->getFromName( '[Content_Types].xml' ) );
 		$this->tempDocumentRelation = $this->fixBrokenMacros( $this->zipClass->getFromName( 'word/_rels/document.xml.rels' ) );
+	}
+
+	private function getDocumentStart() {
+		return '<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" >';
+	}
+
+	private function getDocumentEnd() {
+		return '</w:document>';
 	}
 
 	/**
@@ -231,26 +245,268 @@ class ForDocTemplateProcessor extends TemplateProcessor {
 	 * @inheritdoc
 	 */
 	protected function setValueForPart( $documentPartXML, $search, $replace, $limit ) {
+		$escapedSearch = preg_quote( $search, '/' );
+		preg_match( '/\#\{(' . $escapedSearch . ')}|\$\{(' . $escapedSearch . ')}/i', $documentPartXML, $replaceType );
 
-		if ( ! String::isUTF8( $replace ) ) {
-			$replace = utf8_encode( $replace );
+		if ( count( $replaceType ) > 0 ) {
+			if ( ! empty( $replaceType[2] ) ) {
+				return parent::setValueForPart( $documentPartXML, $search, $replace, $limit );
+			} else {
+				if ( ! String::isUTF8( $replace ) ) {
+					$replace = utf8_encode( $replace );
+				}
+
+				if ( substr( $search, 0, 2 ) !== '#{' && substr( $search, - 1 ) !== '}' ) {
+					$search = '#{' . $search . '}';
+				}
+
+				$startKeyPosition = strpos( $documentPartXML, $search );
+				if ( $startKeyPosition === false ) {
+					return $documentPartXML;
+				}
+
+				$element = simplexml_load_string( $documentPartXML );
+				$root    = $element->xpath( "//w:t" );
+
+				foreach ( $root as $item ) {
+					$itemOriginalString = (string) $item;
+
+					$startKeyPosition = strpos( $itemOriginalString, $search );
+					if ( $startKeyPosition !== false ) {
+						$parentDom = dom_import_simplexml( $item->xpath( "../.." )[0] );
+						$parentDom->parentNode->replaceChild( $parentDom->ownerDocument->createTextNode( $replace ), $parentDom );
+//						libxml_use_internal_errors( true );
+//
+//						$xml = simplexml_load_string( $replace, 'SimpleXmlElement', LIBXML_NOERROR + LIBXML_ERR_FATAL + LIBXML_ERR_NONE );
+//
+//						$replaceElements = dom_import_simplexml( $xml );
+//
+//						if ( $replaceElements == null ) {
+//							libxml_clear_errors();
+//
+//						} else {
+//							foreach ( $replaceElements->childNodes as $replaceChild ) {
+//								if ( $replaceChild->hasChildNodes() ) {
+//									$childs = $replaceChild->childNodes;
+//									foreach ( $childs as $child ) {
+//										$this->simplexml_import_xml( $item->xpath( "../.." )[0], $replace );
+//									}
+//								}
+//							}
+//							//Remove old
+//							$itemDom = dom_import_simplexml( $item );
+//							$parentDom->removeChild( $itemDom );
+//						}
+					}
+				}
+
+
+//		$endKeyPosition   = $startKeyPosition + strlen( $search );
+//		$startTagPosition = HTMLUtils::findNearOpenTag( $documentPartXML, $startKeyPosition, '<w:r ' );
+//		$endTagPosition   = HTMLUtils::findNearCloseTag( $documentPartXML, $endKeyPosition, '</w:r>' ) + strlen( '</w:r>' );
+//		$startPart        = HTMLUtils::getSlice( $documentPartXML, $startTagPosition, HTMLUtils::findNearOpenTag( $documentPartXML, $startKeyPosition, '>' ) ) . '>';
+//		$endPart          = '</' . HTMLUtils::getSlice( $documentPartXML, HTMLUtils::findNearCloseTag( $documentPartXML, $endKeyPosition, '</' ) + strlen( '</' ), $endTagPosition );
+//		$replace          = str_replace( array( '\r\n', '\n\r', '\n', '\r' ), '', $endPart . $startPart . $replace . $endPart . $startPart );
+
+				return htmlspecialchars_decode($element->asXML());
+			}
 		}
 
-		if ( substr( $search, 0, 2 ) !== '${' && substr( $search, - 1 ) !== '}' ) {
-			$search = '${' . $search . '}';
+		return $documentPartXML;
+	}
+
+
+	protected function separatePatterns( $xmlSource ) {
+		$element = simplexml_load_string( $xmlSource );
+		$root    = $element->xpath( "//w:t" );
+
+		foreach ( $root as $item ) {
+			$itemOriginalString = (string) $item;
+			$replacementKeys    = $this->getVariablesForPart( $itemOriginalString );
+			if ( ! empty( $replacementKeys ) ) {
+				//Get part of string in array
+				$slices = $this->getAllSlices( $itemOriginalString, $replacementKeys );
+				if ( count( $slices ) > 1 ) {
+					foreach ( $slices as $slice ) {
+						$emptyWR = $this->setXmlValue( $item->xpath( ".." )[0], "w:t", $slice, true );
+						$this->simplexml_import_xml( $item->xpath( "../.." )[0], $emptyWR );
+					}
+					$parentDom = dom_import_simplexml( $item->xpath( ".." )[0] );
+					$itemDom   = dom_import_simplexml( $item );
+					$parentDom->removeChild( $itemDom );
+				}
+			}
 		}
 
-		$startKeyPosition = strpos( $documentPartXML, $search );
-		if ( $startKeyPosition === false ) {
-			return $documentPartXML;
-		}
-		$endKeyPosition   = $startKeyPosition + strlen( $search );
-		$startTagPosition = HTMLUtils::findNearOpenTag( $documentPartXML, $startKeyPosition, '<w:r ' );
-		$endTagPosition   = HTMLUtils::findNearCloseTag( $documentPartXML, $endKeyPosition, '</w:r>' ) + strlen( '</w:r>' );
-		$startPart        = HTMLUtils::getSlice( $documentPartXML, $startTagPosition, HTMLUtils::findNearOpenTag( $documentPartXML, $startKeyPosition, '>' ) ) . '>';
-		$endPart          = '</' . HTMLUtils::getSlice( $documentPartXML, HTMLUtils::findNearCloseTag( $documentPartXML, $endKeyPosition, '</' ) + strlen( '</' ), $endTagPosition );
-		$replace          = str_replace( array( '\r\n', '\n\r', '\n', '\r' ), '', $endPart . $startPart . $replace . $endPart . $startPart );
+		return $element->asXML();
+	}
 
-		return str_replace( $search, $replace, $documentPartXML );
+	/**
+	 * Set value for node, from parent.
+	 * Ej: setXmlValue($item->xpath( ".." )[0], "w:t", "") set the w:t from it's parent.
+	 *
+	 * @param SimpleXMLElement $parent
+	 * @param $target
+	 * @param $value
+	 *
+	 * @param bool $toString
+	 *
+	 * @return mixed
+	 */
+	public function setXmlValue( SimpleXMLElement $parent, $target, $value, $toString = false ) {
+		$emptyWR = dom_import_simplexml( $parent->xpath( $target )[0] );
+		$emptyWR->setAttribute( "xml:space", "preserve" );
+		$emptyWR->nodeValue = $value;
+		if ( $toString ) {
+			return $parent->asXML();
+		} else {
+			return $parent;
+		}
+	}
+
+	/**
+	 * From url http://stackoverflow.com/a/14831397/4016011
+	 *
+	 * Insert XML into a SimpleXMLElement
+	 *
+	 * @param SimpleXMLElement $parent
+	 * @param string $xml
+	 * @param bool $before
+	 *
+	 * @return bool XML string added
+	 */
+	protected function simplexml_import_xml( SimpleXMLElement $parent, $xml, $before = false ) {
+		$xml = (string) $xml;
+
+		// check if there is something to add
+		if ( $nodata = ! strlen( $xml ) or $parent[0] == null ) {
+			return $nodata;
+		}
+		$fragmentResult = null;
+		// add the XML
+		$node      = dom_import_simplexml( $parent );
+		$fragment  = $node->ownerDocument->createDocumentFragment();
+		$parentDom = dom_import_simplexml( $parent->xpath( ".." )[0] );
+		$xml       = $this->wrapFragment( $parentDom, $xml );
+		$fragment->appendXML( $xml );
+		foreach ( $fragment->childNodes as $item ) {
+			if ( $item->hasChildNodes() ) {
+				$childs = $item->childNodes;
+				foreach ( $childs as $i ) {
+					if ( $before ) {
+						$fragmentResult = $node->parentNode->insertBefore( $fragmentResult, $node );
+					} else {
+						$fragmentResult = $node->appendChild( $i );
+					}
+				}
+			}
+		}
+
+		return $fragmentResult == null;
+	}
+
+	/**
+	 * From url http://www.scriptscoop2.com/t/dac211279689/xml-how-to-use-global-namespace-definitions-in-a-fragment-creation.html
+	 *
+	 * @param $namespaces
+	 * @param $xml
+	 *
+	 * @return string
+	 */
+	private function wrapFragment( $namespaces, $xml ) {
+		if ( $namespaces instanceOf DOMElement ) {
+			$xpath      = new DOMXpath( $namespaces->ownerDocument );
+			$namespaces = $xpath->evaluate( 'namespace::*', $namespaces );
+		}
+		$result = '<fragment';
+		foreach ( $namespaces as $key => $value ) {
+			if ( $value instanceOf DOMNamespaceNode ) {
+				$prefix = $value->localName;
+				$xmlns  = $value->nodeValue;
+			} else {
+				$prefix = $key == '#default' ? '' : $key;
+				$xmlns  = $value;
+			}
+			$result .= ' ' . htmlspecialchars( empty( $prefix ) ? 'xmlns' : 'xmlns:' . $prefix );
+			$result .= '="' . htmlspecialchars( $xmlns ) . '"';
+		}
+
+		return $result . '>' . $xml . '</fragment>';
+	}
+
+	/**
+	 * Return array with all part of text divided by patterns
+	 *
+	 * @param $text
+	 * @param $replacementKeys
+	 *
+	 * @return array
+	 */
+	public function getAllSlices( $text, $replacementKeys ) {
+		$slices = array();
+		if ( count( $replacementKeys ) == 1 && strpos( $text, $replacementKeys[0] ) == 0 && ( strpos( $text, $replacementKeys[0] ) + strlen( $replacementKeys[0] ) ) == strlen( $text ) ) {
+			$slices[] = $text;
+		} else {
+			foreach ( $replacementKeys as $key ) {
+				$keySubtract      = array();
+				$keySubtract[]    = $key;
+				$replacementKeys  = array_diff( $replacementKeys, $keySubtract );
+				$startKeyPosition = strpos( $text, $key );
+				$endKeyPosition   = $startKeyPosition + strlen( $key );
+				$slices[]         = HTMLUtils::getSlice( $text, 0, $startKeyPosition );
+				$slices[]         = $key;
+				$text             = HTMLUtils::getSlice( $text, $endKeyPosition );
+				if ( ! $text ) {
+					array_merge( $slices, $this->getAllSlices( $text, $replacementKeys ) );
+				}
+			}
+		}
+
+		return $slices;
+	}
+
+
+	/**
+	 * Get all patterns in document
+	 *
+	 * @return array
+	 */
+	public function getAllPatterns() {
+		$header   = array();
+		$document = array();
+		$footer   = array();
+		foreach ( $this->tempDocumentHeaders as $index => $headerXML ) {
+			$header = $this->getVariablesForPart( $this->tempDocumentHeaders[ $index ] );
+		}
+
+		$document = $this->getVariablesForPart( $this->tempDocumentMainPart );
+
+		foreach ( $this->tempDocumentFooters as $index => $headerXML ) {
+			$footer = $this->getVariablesForPart( $this->tempDocumentFooters[ $index ] );
+		}
+
+		return array_merge( $header, $document, $footer );
+	}
+
+	/**
+	 * @inheritdoc
+	 */
+	protected function getVariablesForPart( $documentPartXML ) {
+//		preg_match_all( '/\$\{(.*?)}/i', $documentPartXML, $matches );
+		preg_match_all( '/\#\{(.*?)}|\$\{(.*?)}/i', $documentPartXML, $matches1 );
+
+		return $matches1[0];
+	}
+
+	public function preProcessPatterns() {
+		foreach ( $this->tempDocumentHeaders as $index => $headerXML ) {
+			$this->tempDocumentHeaders[ $index ] = $this->separatePatterns( $this->tempDocumentHeaders[ $index ] );
+		}
+
+		$this->tempDocumentMainPart = $this->separatePatterns( $this->tempDocumentMainPart );
+
+		foreach ( $this->tempDocumentFooters as $index => $headerXML ) {
+			$this->tempDocumentFooters[ $index ] = $this->separatePatterns( $this->tempDocumentFooters[ $index ] );
+		}
 	}
 }

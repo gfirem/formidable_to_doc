@@ -110,6 +110,11 @@ class ForDocMerge extends ForDocBase {
 
 		$document = new ForDocTemplateProcessor( $template_path );
 
+		$document->setValue( 'form_reference', htmlspecialchars( $entry->id ) );
+		$generationTimeFormat = ForDocManager::getDateFormat();
+		$generationTime       = date( $generationTimeFormat, time() );
+		$document->setValue( 'generation_time', $generationTime );
+
 		foreach ( $entry->metas as $id => $meta ) {
 
 			$type = $this->get_field_type( $id );
@@ -118,10 +123,6 @@ class ForDocMerge extends ForDocBase {
 				$meta = trim( htmlentities( $meta, ENT_QUOTES, "UTF-8" ) );
 			}
 
-			$document->setValue( 'form_reference', htmlspecialchars( $entry->id ) );
-			$generationTimeFormat = ForDocManager::getDateFormat();
-			$generationTime       = date( $generationTimeFormat, time() );
-			$document->setValue( 'generation_time', $generationTime );
 			if ( ! in_array( $type, ForDocManager::getUnUsedFields() ) ) {
 				switch ( $type ) {
 					case 'textarea':
@@ -133,7 +134,7 @@ class ForDocMerge extends ForDocBase {
 									$document->setValue( $key, $actionContentResult );
 								}
 							} else {
-								$document->setValue( $key, htmlspecialchars( $meta ) );
+								$document->setValue( $key, $meta );
 							}
 						}
 						break;
@@ -164,7 +165,7 @@ class ForDocMerge extends ForDocBase {
 											}
 										} else {
 											//TODO ver 1.0 convert $actionContentResult in array to separate content by coma ,
-											$actionContentResult .= html_entity_decode( $single_meta );
+											$actionContentResult .= do_shortcode( $single_meta, true );
 										}
 									}
 								}
@@ -178,7 +179,7 @@ class ForDocMerge extends ForDocBase {
 											$actionContentResult = $tempDocument->mergeFiles( $document );
 										}
 									} else {
-										$actionContentResult = html_entity_decode( $meta );
+										$actionContentResult = do_shortcode( $meta, true );
 									}
 									if ( $type == 'select' || $type == 'radio' ) {
 										break 1;

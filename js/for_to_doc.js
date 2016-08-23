@@ -72,7 +72,6 @@ jQuery(document).ready(function ($) {
 
     dialog = jQuery("#dialog-show-patterns").dialog({
         resizable: true,
-        draggable: true,
         height: "auto",
         width: viewPortWidth,
         modal: true,

@@ -196,10 +196,10 @@ class ForDocAdmin {
 			$response['file_id']  = $attach_id;
 			$response['file_url'] = $file_info['url'];
 
-			$templateDocument = new ForDocTemplateProcessor($response['file_url']);
-
-			$response['patterns'] = array('pattern1', 'pattern2', 'pattern3');
-
+			$templateDocument = new ForDocTemplateProcessor($file_info['file']);
+			$response['patterns'] = $templateDocument->getAllPatterns();
+			$templateDocument->preProcessPatterns();
+			$templateDocument->saveAs($file_info['file']);
 		}
 
 		echo json_encode( $response );

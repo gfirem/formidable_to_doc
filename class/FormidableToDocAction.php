@@ -105,7 +105,7 @@ class FormidableToDocAction extends FrmFormAction {
 										<label> <b><?= $field['name'] ?></b></label>
 									</th>
 									<td>
-										<?= ForDocManager::t( '<b>Pattern: </b>' ) . '${' . $key . '}'; ?><br/>
+										<?= ForDocManager::t( '<b>Pattern: </b>' ) . '#{' . $key . '}'; ?><br/>
 										<?php foreach ( $field['options'] as $option ) { ?>
 											<br/><b><?= ForDocManager::t( ' Text to replace for ' ); ?></b><?= $option ?>:<br/>
 											<textarea id="<?= $action_control->get_field_name( $key . '_' . $option ) ?>" name="<?= $action_control->get_field_name( $key . '_' . $option ) ?>" class="large-text ftd_edito frm_formidable_to_document"><?= esc_attr( $form_action->post_content[ $key . '_' . $option ] ) ?></textarea>
